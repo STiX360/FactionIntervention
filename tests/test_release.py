@@ -193,6 +193,22 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(upload['with']['archive_existing_version'], 'false')
         self.assertEqual(upload['with']['filename'], 'dist/${{ needs.build.outputs.filename }}')
 
+    def test_settings_labels_use_correct_vanilla_rank_titles(self):
+        import yaml
+        labels = yaml.safe_load((ROOT / 'l10n/FactionIntervention/en.yaml').read_text())
+        self.assertEqual(labels['almsiviAllowances'], 'Almsivi Intervention')
+        self.assertIn('99 = Unlimited uses', labels['divineFaction'])
+        self.assertIn('99 = Unlimited uses', labels['almsiviFaction'])
+        titles = {
+            'divine': ('Layman', 'Novice', 'Initiate', 'Acolyte', 'Adept',
+                       'Disciple', 'Oracle', 'Invoker', 'Theurgist', 'Primate'),
+            'almsivi': ('Layman', 'Novice', 'Initiate', 'Acolyte', 'Adept',
+                        'Curate', 'Disciple', 'Diviner', 'Master', 'Patriarch'),
+        }
+        for kind, ranks in titles.items():
+            for rank, title in enumerate(ranks, 1):
+                self.assertEqual(labels[f'{kind}Rank{rank}'], f'Maximum uses: {title}')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

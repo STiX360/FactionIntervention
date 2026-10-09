@@ -21,8 +21,9 @@ local function status()
     local parts = { 'FI test: ' .. tostring(self.cell.name) .. ' ' .. tostring(self.position) }
     for _, kind in ipairs({ 'divine', 'almsivi' }) do
         local rank = types.NPC.getFactionRank(self, policy.factions[kind].id)
+        local remaining = I.FactionIntervention.getRemaining(kind)
         parts[#parts + 1] = kind .. ': rank=' .. rank .. ', used=' .. state.used[kind]
-            .. ', remaining=' .. I.FactionIntervention.getRemaining(kind)
+            .. ', remaining=' .. (remaining == math.huge and 'unlimited' or tostring(remaining))
             .. ', recoveryHours=' .. (state.recovery[kind] and
                 string.format('%.2f', math.max(0, 72 - (core.getGameTime() - state.recovery[kind]) / 3600)) or 'off')
     end
@@ -38,11 +39,11 @@ local function run(command)
     elseif command == 'nonmember' then
         pendingRank = nil
         for _, faction in pairs(policy.factions) do types.NPC.leaveFaction(self, faction.id) end
-    elseif command == 'member' or command == 'promote' or command == 'demote' then
+    elseif command == 'member' or command == 'promote' or command == 'demote' or command == 'max-rank' then
         for _, faction in pairs(policy.factions) do
             types.NPC.joinFaction(self, faction.id)
         end
-        pendingRank = command == 'promote' and 3 or 1
+        pendingRank = command == 'max-rank' and policy.maxRank or (command == 'promote' and 3 or 1)
     elseif command == 'home' or command == 'day' or command == 'three-days' or command == 'diagnostics'
         or command == 'disease' or command == 'blight' then
         core.sendGlobalEvent('FactionInterventionTestAction', { player = self.object, command = command })
@@ -71,8 +72,9 @@ return {
             settings:set('enabled', true)
             settings:set('messages', true)
             for _, kind in ipairs({ 'divine', 'almsivi' }) do
-                settings:set(kind .. 'Rank1', 1)
-                settings:set(kind .. 'Rank3', 2)
+                local allowances = storage.playerSection('SettingsPlayerFactionIntervention_' .. kind)
+                allowances:set(kind .. 'Rank1', 1)
+                allowances:set(kind .. 'Rank3', 2)
             end
             ready()
             ui.showMessage('FI shrine test ready: two labelled shrines nearby, 500 gold, spells and items supplied.')

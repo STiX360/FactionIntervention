@@ -1,25 +1,29 @@
 PageName: Faction Intervention
-Allowances: Allowances
+General: General
+divineAllowances: Divine Intervention
+divineFaction: "Imperial Cult\n99 = Unlimited uses"
+almsiviAllowances: Almsivi Intervention
+almsiviFaction: "Tribunal Temple\n99 = Unlimited uses"
 Enabled: Enabled
 Messages: Messages
 ExemptItems: Exempt scrolls and enchanted items
-divineRank1: Imperial Cult rank 1
-divineRank2: Imperial Cult rank 2
-divineRank3: Imperial Cult rank 3
-divineRank4: Imperial Cult rank 4
-divineRank5: Imperial Cult rank 5
-divineRank6: Imperial Cult rank 6
-divineRank7: Imperial Cult rank 7
-divineRank8: Imperial Cult rank 8
-divineRank9: Imperial Cult rank 9
-divineRank10: Imperial Cult rank 10
-almsiviRank1: Tribunal Temple rank 1
-almsiviRank2: Tribunal Temple rank 2
-almsiviRank3: Tribunal Temple rank 3
-almsiviRank4: Tribunal Temple rank 4
-almsiviRank5: Tribunal Temple rank 5
-almsiviRank6: Tribunal Temple rank 6
-almsiviRank7: Tribunal Temple rank 7
-almsiviRank8: Tribunal Temple rank 8
-almsiviRank9: Tribunal Temple rank 9
-almsiviRank10: Tribunal Temple rank 10
+divineRank1: "Maximum uses: Layman"
+divineRank2: "Maximum uses: Novice"
+divineRank3: "Maximum uses: Initiate"
+divineRank4: "Maximum uses: Acolyte"
+divineRank5: "Maximum uses: Adept"
+divineRank6: "Maximum uses: Disciple"
+divineRank7: "Maximum uses: Oracle"
+divineRank8: "Maximum uses: Invoker"
+divineRank9: "Maximum uses: Theurgist"
+divineRank10: "Maximum uses: Primate"
+almsiviRank1: "Maximum uses: Layman"
+almsiviRank2: "Maximum uses: Novice"
+almsiviRank3: "Maximum uses: Initiate"
+almsiviRank4: "Maximum uses: Acolyte"
+almsiviRank5: "Maximum uses: Adept"
+almsiviRank6: "Maximum uses: Curate"
+almsiviRank7: "Maximum uses: Disciple"
+almsiviRank8: "Maximum uses: Diviner"
+almsiviRank9: "Maximum uses: Master"
+almsiviRank10: "Maximum uses: Patriarch"

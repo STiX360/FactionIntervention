@@ -2,6 +2,11 @@
 
 ## Changes in 0.3.0
 
+- A rank allowance of **99** now means unlimited faction uses. Primate and Patriarch
+  default to 99; lower ranks can also be made unlimited. Existing saved limits remain
+  unchanged, so set the highest ranks to 99 when updating an older save if desired.
+- Settings now separate General, Divine/Imperial Cult, and Almsivi/Tribunal Temple,
+  with named ranks and an explanation of the unlimited value.
 - Added **Exempt scrolls and enchanted items** to Script Settings, enabled by default.
 - Turn it off to require faction membership and share the ordinary Intervention
   allowance with scrolls and cast-on-use enchanted items.
@@ -10,8 +15,8 @@
 - Empty-charge item failures and native teleport restrictions do not cause a debit.
 - Recall, constant effects, cast-on-strike enchantments, and other items remain unaffected.
 
-The new mode has eight additional automated regression cases; all 38 runtime tests
-pass. Its in-game acceptance check is still pending. The standalone gameplay results
+The item-limit mode and configurable unlimited allowances have automated regression
+coverage. Their complete in-game acceptance checks remain pending. The standalone gameplay results
 below describe the 0.2.0 baseline, not a new claim that item limits were tested in-game.
 Consumption-based scroll accounting is not compatible with god-mode scroll casts
 that do not consume inventory, and can be affected by other mods changing inventory

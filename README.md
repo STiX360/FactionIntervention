@@ -11,12 +11,20 @@ No ESP, MWSE, or bridge dependency is required.
 ## Rules
 
 Nonmembers cannot cast the corresponding ordinary Intervention spell. Membership
-ranks 1 through 10 default to 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 maximum uses per faction.
-Each rank's allowance is configurable from 0 to 99 in Script Settings.
+ranks 1 through 10 default to 1, 1, 2, 2, 3, 3, 4, 4, 5, unlimited uses per faction.
+Each rank's allowance is configurable in Script Settings: 0 disables its allowance,
+1-98 sets a finite maximum, and **99 means unlimited**. Primate and Patriarch default
+to 99; any lower rank can also be configured for unlimited use.
+Existing saved settings are preserved: set the highest ranks to 99 or reset their
+settings groups if updating a save that previously had finite highest-rank limits.
 
 - Promotion increases maximum capacity without erasing spent uses.
 - Each faction restores one use every three in-game days, independently.
 - Further casts do not restart an active recovery timer. At full capacity it stops.
+- Unlimited casts do not add spent uses or need recovery. Earlier spent uses remain
+  preserved; returning to a finite allowance resumes recovery with a fresh timer.
+- Unlimited ranks produce no usage or restoration messages; native casting works
+  quietly. Finite ranks still follow the Messages setting.
 - Resting/waiting counts; time spent at full capacity cannot be banked.
 - Completed supported shrine services refill the corresponding faction to its
   current maximum. Free services at higher ranks qualify too.

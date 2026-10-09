@@ -14,34 +14,64 @@ local group = 'SettingsPlayerFactionIntervention'
 
 I.Settings.registerPage { key = 'FactionIntervention', l10n = 'FactionIntervention', name = 'PageName' }
 
-local settingsSpec = {
+local generalSettingsSpec = {
     { key = 'enabled', renderer = 'checkbox', name = 'Enabled', default = true },
     { key = 'messages', renderer = 'checkbox', name = 'Messages', default = true },
     { key = 'exemptItems', renderer = 'checkbox', name = 'ExemptItems', default = true },
 }
 
-for _, kind in ipairs({ 'divine', 'almsivi' }) do
-    for rank = 1, 10 do
-        settingsSpec[#settingsSpec + 1] = {
+I.Settings.registerGroup {
+    key = group,
+    page = 'FactionIntervention',
+    l10n = 'FactionIntervention',
+    name = 'General',
+    order = 0,
+    permanentStorage = false,
+    settings = generalSettingsSpec,
+}
+
+local generalSettings = storage.playerSection(group)
+local settingSections = {}
+local settingsSpec = {}
+for _, spec in ipairs(generalSettingsSpec) do
+    settingsSpec[#settingsSpec + 1] = spec
+    settingSections[spec.key] = generalSettings
+end
+
+for index, kind in ipairs({ 'divine', 'almsivi' }) do
+    local rankSettings = {}
+    local sectionKey = group .. '_' .. kind
+    local section = storage.playerSection(sectionKey)
+    for rank = 1, policy.maxRank do
+        local spec = {
             key = kind .. 'Rank' .. rank,
             renderer = 'number',
             name = kind .. 'Rank' .. rank,
             default = policy.defaultAllowances[kind][rank],
             argument = { min = 0, max = 99 },
         }
+        rankSettings[#rankSettings + 1] = spec
+        settingsSpec[#settingsSpec + 1] = spec
+        settingSections[spec.key] = section
     end
+    I.Settings.registerGroup {
+        key = sectionKey,
+        page = 'FactionIntervention',
+        l10n = 'FactionIntervention',
+        name = kind .. 'Allowances',
+        description = kind .. 'Faction',
+        order = index,
+        permanentStorage = false,
+        settings = rankSettings,
+    }
 end
 
-I.Settings.registerGroup {
-    key = group,
-    page = 'FactionIntervention',
-    l10n = 'FactionIntervention',
-    name = 'Allowances',
-    permanentStorage = false,
-    settings = settingsSpec,
+-- Keep the existing flat save keys while the UI uses three storage groups.
+local settings = {
+    get = function(_, key) return settingSections[key]:get(key) end,
+    set = function(_, key, value) settingSections[key]:set(key, value) end,
 }
 
-local settings = storage.playerSection(group)
 local state = policy.normaliseState(nil)
 local saved
 local pendingAllowed
@@ -112,6 +142,8 @@ local function completePending()
     if cast.source ~= 'spell' and settings:get('exemptItems') ~= false then return end
     -- A successful casting roll or consumed scroll can still have its teleport blocked.
     if not types.Player.isTeleportingEnabled(self) then return end
+    if policy.isUnlimited(cast.kind, cast.rank, settings)
+        or policy.isUnlimited(cast.kind, getRank(cast.kind), settings) then return end
     policy.recordSuccess(state, cast.kind, core.getGameTime())
     if messagesEnabled() then
         ui.showMessage(policy.statusMessage(cast.kind, cast.rank, state.used, settings))
@@ -221,7 +253,7 @@ return {
             local kind = data.kind
             if not policy.factions[kind] or settings:get('enabled') == false or getRank(kind) == 0 then return end
             policy.refill(state, kind)
-            if messagesEnabled() then
+            if messagesEnabled() and not policy.isUnlimited(kind, getRank(kind), settings) then
                 ui.showMessage(policy.factions[kind].label .. ' Intervention allowance fully restored by shrine service.')
             end
         end,

@@ -2,6 +2,8 @@ local M = {}
 
 M.version = 2
 M.recoveryInterval = 3 * 24 * 60 * 60
+M.maxRank = 10
+M.unlimitedSetting = 99
 
 M.effects = {
     divine = 'divineintervention',
@@ -14,8 +16,8 @@ M.factions = {
 }
 
 M.defaultAllowances = {
-    divine = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 },
-    almsivi = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 },
+    divine = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 99 },
+    almsivi = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 99 },
 }
 
 local function clampNumber(value, fallback, low, high)
@@ -59,7 +61,12 @@ function M.allowance(kind, rank, settings)
     rank = clampNumber(rank, 0, 0, 10)
     if rank <= 0 then return 0 end
     local key = kind .. 'Rank' .. rank
-    return clampNumber(settings:get(key), M.defaultAllowances[kind][rank] or 0, 0, 99)
+    local cap = clampNumber(settings:get(key), M.defaultAllowances[kind][rank] or 0, 0, M.unlimitedSetting)
+    return cap == M.unlimitedSetting and math.huge or cap
+end
+
+function M.isUnlimited(kind, rank, settings)
+    return M.allowance(kind, rank, settings) == math.huge
 end
 
 function M.remaining(kind, rank, used, settings)
@@ -101,6 +108,11 @@ end
 
 function M.recover(state, kind, rank, settings, now)
     state.bestRank[kind] = math.max(state.bestRank[kind] or 0, rank)
+    -- Unlimited casts incur no debt; keep earlier debt for a possible demotion.
+    if M.isUnlimited(kind, rank, settings) then
+        state.recovery[kind] = nil
+        return 0
+    end
     if state.used[kind] <= 0 then
         state.recovery[kind] = nil
         return 0
@@ -135,6 +147,9 @@ end
 function M.statusMessage(kind, rank, used, settings)
     local left, cap = M.remaining(kind, rank, used, settings)
     local label = M.factions[kind].label
+    if cap == math.huge then
+        return label .. ' grants unlimited Intervention uses.'
+    end
     if cap == 0 then
         return label .. ' grants you no remaining Intervention allowance.'
     end

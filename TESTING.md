@@ -45,6 +45,7 @@ commands do not simulate casts or teleport outcomes.
 | --- | --- |
 | `member` | Join both factions at rank 1 |
 | `promote` | Join if necessary and set both faction ranks to 3 |
+| `max-rank` | Join if necessary and set both factions to their highest rank |
 | `demote` | Set both factions to rank 1 |
 | `nonmember` | Leave both factions |
 | `ready` | Refill magicka/fatigue and restore high casting stats |
@@ -130,6 +131,39 @@ Do not use god mode: consumption tracking cannot observe an unconsumed scroll.
 
 Inspect with `I.FactionInterventionTest.status()` after each case. Returning home
 never restores allowances; complete the appropriate shrine service to refill.
+
+## Unlimited Allowances
+
+Use a disposable character, with the mod enabled. In the Lua player console run:
+
+```lua
+I.FactionInterventionTest.run('max-rank')
+```
+
+Close the console briefly, then inspect `I.FactionInterventionTest.status()`.
+Primate and Patriarch should default to 99 in settings; older saves retain their
+previous caps, so set both to 99 manually if needed. Status should show
+`remaining=unlimited` and `recoveryHours=off` for both factions.
+
+1. Run `ready` as needed and successfully cast each Intervention at least seven
+   times. Teleport normally; spent uses must not increase and no recovery timer starts.
+   No usage messages should appear, even with Messages enabled. Complete each
+   faction's shrine service too: native blessings still apply, without a mod refill message.
+2. Uncheck item exemptions. Use each faction's scroll and enchanted item. Native
+   scroll/charge consumption still applies; faction spent uses must not increase.
+3. Save and reload. The 99 settings, spent counters, and unlimited status persist.
+4. Set Primate's limit to 2. With no previously spent Divine uses, two successful
+   casts consume those uses and the third is refused. Almsivi remains unlimited.
+5. Set Primate back to 99. Divine works again without adding to the two spent uses.
+6. Run `member`, close the console briefly, and set Layman's Divine limit to 99.
+   Divine remains unlimited at the lowest rank; setting it to 3 exposes one use
+   after the two earlier spent uses. Recovery starts afresh, without banked time.
+7. Run `nonmember`, close the console briefly, and try both ordinary spells and
+   limited items. Membership is still required even when a rank's limit is 99.
+
+Return to a fresh test session afterward, or restore your test settings before
+running earlier finite-allowance cases. Unlimited refers only to this mod's faction
+budget, not native magicka, casting chance, charges, scroll inventory, or teleport flags.
 
 ## Automated Checks
 

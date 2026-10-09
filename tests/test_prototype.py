@@ -18,6 +18,7 @@ class PrototypeTests(unittest.TestCase):
         self.lua.execute("""
             package.path = root .. '/?.lua;' .. package.path
             values = {}
+            settingsGroups = {}
             section = {get=function(_, k) return values[k] end,
                        set=function(_, k, v) values[k]=v end}
             clock = 0
@@ -39,6 +40,7 @@ class PrototypeTests(unittest.TestCase):
                         enchantments={records=enchantments}}}
             interfaces = {
                 Settings={registerPage=function() end, registerGroup=function(g)
+                    settingsGroups[g.key]=g
                     for _, s in ipairs(g.settings) do values[s.key]=s.default end
                 end},
                 SkillProgression={SKILL_USE_TYPES={Spellcast_Success=0,Enchant_UseMagicItem=1},
@@ -87,6 +89,67 @@ class PrototypeTests(unittest.TestCase):
     def check(self, code):
         self.lua.execute(code)
 
+    def test_settings_groups_are_ordered_and_describe_usage_limits(self):
+        self.check("""
+            local base='SettingsPlayerFactionIntervention'
+            local general=settingsGroups[base]
+            assert(general.name=='General' and general.order==0 and #general.settings==3)
+            assert(general.settings[3].key=='exemptItems')
+            for index,kind in ipairs({'divine','almsivi'}) do
+                local group=settingsGroups[base .. '_' .. kind]
+                assert(group.name==kind .. 'Allowances' and group.order==index)
+                assert(group.description==kind .. 'Faction')
+                assert(#group.settings==10 and group.permanentStorage==false)
+                for rank,spec in ipairs(group.settings) do
+                    assert(spec.key==kind .. 'Rank' .. rank)
+                    assert(spec.default==policy.defaultAllowances[kind][rank])
+                end
+            end
+        """)
+
+    def test_separate_settings_storage_preserves_old_saves_and_group_resets(self):
+        self.check("""
+            local base='SettingsPlayerFactionIntervention'
+            local sections={}
+            local function getSection(key)
+                if not sections[key] then
+                    local data={}
+                    sections[key]={data=data,get=function(_,k) return data[k] end,
+                                   set=function(_,k,v) data[k]=v end}
+                end
+                return sections[key]
+            end
+            require('openmw.storage').playerSection=getSection
+            interfaces.Settings.registerGroup=function(g)
+                settingsGroups[g.key]=g
+                local s=getSection(g.key)
+                for _,spec in ipairs(g.settings) do
+                    if s:get(spec.key)==nil then s:set(spec.key,spec.default) end
+                end
+            end
+            package.loaded['scripts.faction_intervention.player']=nil
+            mod=require('scripts.faction_intervention.player')
+            mod.engineHandlers.onLoad({used={divine=1,almsivi=2},
+                settings={enabled=true,messages=false,exemptItems=false,
+                          divineRank1=7,almsiviRank1=4}})
+            mod.engineHandlers.onFrame()
+            assert(mod.interface.getRemaining('divine')==6)
+            assert(mod.interface.getRemaining('almsivi')==2)
+            assert(sections[base]:get('exemptItems')==false)
+            assert(sections[base]:get('divineRank1')==nil)
+            assert(sections[base .. '_divine']:get('divineRank1')==7)
+            assert(sections[base .. '_almsivi']:get('almsiviRank1')==4)
+            local saved=mod.engineHandlers.onSave()
+            assert(saved.settings.divineRank1==7 and saved.settings.almsiviRank1==4)
+            assert(saved.settings.exemptItems==false and saved.settings.messages==false)
+            for _,spec in ipairs(settingsGroups[base .. '_divine'].settings) do
+                sections[base .. '_divine']:set(spec.key,spec.default)
+            end
+            assert(mod.interface.getRemaining('divine')==0)
+            assert(mod.interface.getRemaining('almsivi')==2)
+            assert(sections[base]:get('exemptItems')==false)
+        """)
+
     def test_both_factions_and_exhaustion(self):
         self.check("""
             for _, kind in ipairs({'divine','almsivi'}) do
@@ -105,6 +168,149 @@ class PrototypeTests(unittest.TestCase):
             local castStarted = actor.controls.use ~= actor.ATTACK_TYPE.NoAttack
             assert(not castStarted)
             assert(mod.interface.getState().used.divine==0)
+        """)
+
+    def test_top_rank_defaults_unlimited_and_saved_counters_remain_finite(self):
+        self.check("""
+            assert(values.divineRank10==99 and values.almsiviRank10==99)
+            mod.engineHandlers.onLoad({used={divine=2,almsivi=1},recovery={divine=0,almsivi=0}})
+            ranks['imperial cult']=10; ranks.temple=10
+            mod.engineHandlers.onFrame()
+            for _,kind in ipairs({'divine','almsivi'}) do
+                assert(mod.interface.getRemaining(kind)==math.huge)
+                for cast=1,12 do
+                    attempt(kind); assert(actor.controls.use==1)
+                    success('mysticism',{useType=0})
+                end
+                local message=policy.statusMessage(kind,10,{},section)
+                assert(message:find('unlimited') and not message:find('inf'))
+            end
+            local data=mod.engineHandlers.onSave()
+            assert(data.used.divine==2 and data.used.almsivi==1)
+            assert(data.recovery.divine==nil and data.recovery.almsivi==nil)
+            assert(data.settings.divineRank10==99 and data.settings.almsiviRank10==99)
+        """)
+
+    def test_lower_rank_unlimited_is_faction_specific_and_requires_membership(self):
+        self.check("""
+            values.divineRank1=99
+            for cast=1,12 do
+                attempt('divine'); assert(actor.controls.use==1)
+                success('mysticism',{useType=0})
+            end
+            assert(mod.interface.getState().used.divine==0)
+            assert(mod.interface.getRemaining('almsivi')==1)
+            attempt('almsivi'); success('mysticism',{useType=0})
+            attempt('almsivi'); assert(actor.controls.use==0)
+            ranks['imperial cult']=0
+            attempt('divine'); assert(actor.controls.use==0)
+            assert(mod.interface.getRemaining('divine')==0)
+        """)
+
+    def test_unlimited_casts_items_recovery_and_shrines_are_silent(self):
+        self.check("""
+            mod.engineHandlers.onLoad({used={divine=2,almsivi=1},
+                recovery={divine=0,almsivi=0},
+                settings={divineRank1=99,almsiviRank1=99,exemptItems=false,messages=true}})
+            gameTime=2592000; mod.engineHandlers.onFrame()
+            assert(#messages==0)
+            for _,kind in ipairs({'divine','almsivi'}) do
+                attempt(kind); success('mysticism',{useType=0})
+                local id=attemptItem(kind,'scroll')
+                inventoryCounts[id]=inventoryCounts[id]-1
+                actor.controls.use=0; mod.engineHandlers.onFrame()
+                attemptItem(kind,'item'); success('enchant',{useType=1})
+                assert(#messages==0)
+                mod.eventHandlers.FactionInterventionShrineCompleted({kind=kind})
+                assert(#messages==0)
+                assert(mod.interface.getState().used[kind]==0)
+            end
+        """)
+
+    def test_finite_faction_messages_continue_while_other_faction_is_unlimited(self):
+        self.check("""
+            values.divineRank1=99
+            attempt('divine'); success('mysticism',{useType=0})
+            mod.eventHandlers.FactionInterventionShrineCompleted({kind='divine'})
+            assert(#messages==0)
+            attempt('almsivi'); success('mysticism',{useType=0})
+            assert(#messages==1 and messages[1]:find('allowance'))
+            actor.controls.use=0; gameTime=259200; mod.engineHandlers.onFrame()
+            assert(#messages==2 and messages[2]:find('recovered'))
+            mod.eventHandlers.FactionInterventionShrineCompleted({kind='almsivi'})
+            assert(#messages==3 and messages[3]:find('fully restored'))
+        """)
+
+    def test_promotion_to_unlimited_during_cast_is_silent(self):
+        self.check("""
+            attempt('divine')
+            ranks['imperial cult']=10
+            success('mysticism',{useType=0})
+            assert(#messages==0 and mod.interface.getState().used.divine==0)
+        """)
+
+    def test_highest_rank_can_have_finite_limits(self):
+        self.check("""
+            ranks['imperial cult']=10; ranks.temple=10
+            values.divineRank10=2; values.almsiviRank10=0
+            for cast=1,2 do
+                attempt('divine'); assert(actor.controls.use==1)
+                success('mysticism',{useType=0})
+            end
+            attempt('divine'); assert(actor.controls.use==0)
+            attempt('almsivi'); assert(actor.controls.use==0)
+            assert(mod.interface.getState().used.divine==2)
+            values.divineRank10=98
+            assert(policy.allowance('divine',10,section)==98)
+            values.divineRank10=99
+            assert(policy.allowance('divine',10,section)==math.huge)
+        """)
+
+    def test_unlimited_pauses_debt_and_resumes_recovery_without_banking(self):
+        self.check("""
+            mod.engineHandlers.onLoad({used={divine=2},recovery={divine=0},settings={divineRank1=99}})
+            gameTime=2592000; mod.engineHandlers.onFrame()
+            assert(mod.interface.getState().used.divine==2)
+            assert(mod.interface.getState().recovery.divine==nil)
+            local data=mod.engineHandlers.onSave()
+            mod.engineHandlers.onLoad(data); mod.engineHandlers.onFrame()
+            assert(values.divineRank1==99)
+            ranks['imperial cult']=10; mod.engineHandlers.onFrame()
+            assert(mod.interface.getState().used.divine==2)
+            ranks['imperial cult']=1; values.divineRank1=3
+            gameTime=5184000; mod.engineHandlers.onFrame()
+            assert(mod.interface.getRemaining('divine')==1)
+            assert(mod.interface.getState().recovery.divine==gameTime)
+            gameTime=gameTime+259199; mod.engineHandlers.onFrame()
+            assert(mod.interface.getState().used.divine==2)
+            gameTime=gameTime+1; mod.engineHandlers.onFrame()
+            assert(mod.interface.getState().used.divine==1)
+        """)
+
+    def test_unlimited_limited_items_do_not_spend_faction_uses(self):
+        self.check("""
+            values.exemptItems=false
+            ranks['imperial cult']=10; ranks.temple=10
+            for _,kind in ipairs({'divine','almsivi'}) do
+                local id=attemptItem(kind,'scroll'); assert(actor.controls.use==1)
+                inventoryCounts[id]=inventoryCounts[id]-1
+                actor.controls.use=0; mod.engineHandlers.onFrame()
+                attemptItem(kind,'item'); assert(actor.controls.use==1)
+                success('enchant',{useType=1})
+                assert(mod.interface.getState().used[kind]==0)
+                assert(mod.interface.getState().recovery[kind]==nil)
+                assert(mod.interface.getRemaining(kind)==math.huge)
+            end
+        """)
+
+    def test_existing_finite_highest_rank_settings_survive_load(self):
+        self.check("""
+            mod.engineHandlers.onLoad({used={divine=1},settings={divineRank10=6,almsiviRank10=4}})
+            ranks['imperial cult']=10; ranks.temple=10
+            mod.engineHandlers.onFrame()
+            assert(mod.interface.getRemaining('divine')==5)
+            assert(mod.interface.getRemaining('almsivi')==4)
+            assert(mod.engineHandlers.onSave().settings.divineRank10==6)
         """)
 
     def test_switching_interventions_charges_original_spell_once(self):
@@ -669,6 +875,9 @@ class FixtureTests(unittest.TestCase):
             for id in pairs(joins) do ranks[id]=1 end
             testPlayer.engineHandlers.onFrame()
             assert(ranks.temple==3 and ranks['imperial cult']==3)
+            testPlayer.interface.run('max-rank')
+            testPlayer.engineHandlers.onFrame()
+            assert(ranks.temple==10 and ranks['imperial cult']==10)
             testPlayer.interface.run('fail'); assert(magicka.current==0)
             testPlayer.interface.run('ready'); assert(magicka.current==500)
             testPlayer.interface.run('nonmember'); assert(ranks.temple==0)

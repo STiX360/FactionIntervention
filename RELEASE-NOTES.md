@@ -1,12 +1,21 @@
-# Faction Intervention 0.3.0
+# Faction Intervention 0.4.0
 
-## Changes in 0.3.0
+## Changes in 0.4.0
 
 - A rank allowance of **99** now means unlimited faction uses. Primate and Patriarch
   default to 99; lower ranks can also be made unlimited. Existing saved limits remain
   unchanged, so set the highest ranks to 99 when updating an older save if desired.
 - Settings now separate General, Divine/Imperial Cult, and Almsivi/Tribunal Temple,
   with named ranks and an explanation of the unlimited value.
+- Unlimited ranks no longer display usage or restoration messages, while finite
+  ranks retain their normal Messages setting.
+
+All 49 mocked runtime regression tests pass with both the installed engine Lua and
+portable CI Lua backends. The author reports the item toggle and unlimited-use
+behavior working in-game; exhaustive acceptance and cross-mod checks remain unverified.
+
+## Previous Release: 0.3.0
+
 - Added **Exempt scrolls and enchanted items** to Script Settings, enabled by default.
 - Turn it off to require faction membership and share the ordinary Intervention
   allowance with scrolls and cast-on-use enchanted items.

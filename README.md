@@ -1,6 +1,6 @@
 # Faction Intervention for OpenMW
 
-Version 0.3.0. Targets standalone OpenMW 0.51.0 with Morrowind.esm.
+Version 0.4.0. Targets standalone OpenMW 0.51.0 with Morrowind.esm.
 The default behavior was tested in-game for 0.2.0. The new optional item-limit mode
 passes automated tests but still needs its in-game acceptance check.
 

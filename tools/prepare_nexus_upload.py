@@ -25,7 +25,7 @@ def metadata(root, dry_run, confirmation):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('Invalid VERSION')
     if dry_run == 'false' and confirmation != version:
-        raise ValueError('For a real upload, confirm_version must exactly match VERSION')
+        raise ValueError(f'Release/upload version {confirmation!r} does not match VERSION {version!r}')
     filename = f'Faction-Intervention-OpenMW-{version}.zip'
     archive = root / 'dist' / filename
     return {'version': version, 'filename': filename,

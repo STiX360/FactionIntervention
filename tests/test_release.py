@@ -115,6 +115,16 @@ class ReleaseTests(unittest.TestCase):
             with self.subTest(mode=mode, confirmation=confirmation), self.assertRaises(ValueError):
                 metadata(self.root, mode, confirmation)
 
+    def test_tag_mismatch_error_names_both_versions(self):
+        with self.assertRaisesRegex(ValueError, "'0.4.0'.*VERSION '0.3.0'"):
+            metadata(self.root, 'false', '0.4.0')
+
+    def test_current_checkout_version_has_matching_release_notes(self):
+        version = (ROOT / 'VERSION').read_text().strip()
+        self.assertTrue(release_notes(ROOT, version))
+        self.assertIn(f'Version {version}.', (ROOT / 'README.md').read_text())
+        self.assertTrue((ROOT / 'RELEASE-NOTES.md').read_text().startswith(f'# Faction Intervention {version}\n'))
+
     def test_missing_or_duplicate_or_empty_notes(self):
         for content in ('## 0.2.0\nold', '## 0.3.0\na\n## 0.3.0\nb', '## 0.3.0\n<!-- empty -->'):
             (self.root / 'CHANGELOG.md').write_text(content)

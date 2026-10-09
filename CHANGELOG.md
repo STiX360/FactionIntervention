@@ -1,11 +1,18 @@
 # Changelog
 
-## 0.3.0
+## 0.4.0
 
 - Rank allowances set to 99 now grant unlimited faction uses. Primate and Patriarch
   default to 99; all ranks remain configurable. Existing saved limits are preserved.
 - Settings are grouped by Intervention/faction and use vanilla rank titles.
 - Unlimited ranks no longer display usage or shrine-restoration messages.
+
+Existing settings, spent uses, and save data are preserved. The author reports
+the item toggle and unlimited-use behavior working in-game; complete manual
+acceptance and cross-mod compatibility checks remain unverified.
+
+## 0.3.0
+
 - Added the default-on **Exempt scrolls and enchanted items** Script Settings toggle.
 - Disabling exemptions makes Intervention scrolls and cast-on-use items require
   membership and consume the corresponding faction's ordinary allowance.

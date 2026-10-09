@@ -29,8 +29,8 @@ commit before its matching tag. For the currently prepared version:
 
 ```powershell
 git push origin main
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 Ordinary commits and pull requests validate and retain a ZIP but never publish.

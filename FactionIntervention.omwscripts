@@ -1,0 +1,2 @@
+PLAYER: scripts/faction_intervention/player.lua
+GLOBAL: scripts/faction_intervention/shrines.lua

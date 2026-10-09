@@ -1,0 +1,16 @@
+# Disposable OpenMW profiles, saves, logs, and generated release archives.
+.runtime/
+dist/
+
+# Python caches and local environments.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor and operating-system files.
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+.DS_Store

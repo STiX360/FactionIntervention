@@ -1,0 +1,4 @@
+PLAYER: scripts/faction_intervention/player.lua
+GLOBAL: scripts/faction_intervention/shrines.lua
+GLOBAL: scripts/faction_intervention/test_fixtures.lua
+PLAYER: scripts/faction_intervention/test_player.lua
